@@ -4,7 +4,7 @@
 define(function(require){
 
   var Config = {
-    baseUrl: "http://localhost:8099",
+    baseUrl: "http://public-transport-monitor.herokuapp.com/warsaw-trams",
     apiKey: "AIzaSyCFYmDMYlpzyMeDBW5PljZk4bwj0RIMZN8"
   }
 

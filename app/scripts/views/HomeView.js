@@ -6,11 +6,11 @@ define(function (require) {
   var BaseAppView = require("../views/BaseAppView"),
     MapsApi = require('mapsapi'),
     Template = require("text!../templates/HomeViewTemplate.html"),
-    StopsCollection = require('../collections/StopsCollection');
+    StopsModel = require("../models/StopModel");
 
   var HomeView = BaseAppView.extend({
 
-    stopsCollection: new StopsCollection(),
+    stopModel: new StopsModel(),
 
     initialize: function () {
       var options = {};
@@ -40,10 +40,10 @@ define(function (require) {
         self.map.setOptions(mapOptions);
 
         self.map.addListener("click", function (e) {
-          self.stopsCollection.fetch().done(function (collection) {
-            console.log(collection);
-          }).fail(function (error) {
-            console.log(error);
+          self.stopModel.fetch(e.latLng.lat(), e.latLng.lng()).done(function(){
+            console.log("sucess");
+          }).fail(function(){
+            console.log("fail");
           })
         });
 

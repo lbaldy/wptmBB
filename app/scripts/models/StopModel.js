@@ -8,7 +8,17 @@ define(function (require) {
     Config = require('config');
 
   var StopModel = Backbone.Model.extend({
-    url: Config.baseUrl + "/"
+    url: Config.baseUrl + "/stops",
+
+    fetch: function (lat, lon) {
+      if (lat && lon) {
+        this.url += '/nearest?lat=' + lat + "&lon=" + lon;
+      } else {
+        this.url += Config.baseUrl + "/stops";
+      }
+      return Backbone.Model.prototype.fetch.call(this);
+    }
+
   })
 
   return StopModel;
