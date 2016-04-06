@@ -16,7 +16,9 @@ define(function (require) {
       } else {
         this.url += Config.baseUrl + "/stops";
       }
-      return Backbone.Model.prototype.fetch.call(this);
+      var deferred = Backbone.Model.prototype.fetch.call(this);
+      this.url = Config.baseUrl + "/stops";
+      return deferred;
     }
 
   })

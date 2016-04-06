@@ -4,8 +4,9 @@
 define(function(require){
 
   var Config = {
-    baseUrl: "http://public-transport-monitor.herokuapp.com/warsaw-trams",
-    apiKey: "AIzaSyCFYmDMYlpzyMeDBW5PljZk4bwj0RIMZN8"
+    baseUrl: "http://public-transport-monitor.herokuapp.com/",
+    apiKey: "AIzaSyCFYmDMYlpzyMeDBW5PljZk4bwj0RIMZN8",
+    distance: 1500
   }
 
   return Config;

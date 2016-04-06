@@ -8,7 +8,13 @@ define(function (require) {
     Config = require('config');
 
   var TramModel = Backbone.Model.extend({
-    url: Config.baseUrl + "/"
+
+
+    url: Config.baseUrl + "/warsaw-trams/position/current/near"
+
+    
+
+
   })
 
   return TramModel;
