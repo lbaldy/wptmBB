@@ -78,6 +78,7 @@ define(function (require) {
 
           self.markers.push(new google.maps.LatLng(data.lat, data.lon));
 
+          self.getTrams(data);
           window.setInterval(function () {
             self.clearTrams();
             self.getTrams(data)
