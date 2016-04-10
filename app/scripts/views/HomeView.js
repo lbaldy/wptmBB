@@ -119,7 +119,7 @@ define(function (require) {
       for (var i = 0; i < this.markers.length; i++) {
         new google.maps.Marker({
           position: this.markers[i],
-          icon: this.stopImage,
+          label: "S",
           map: this.map
         });
       }
