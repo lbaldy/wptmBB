@@ -10,7 +10,8 @@ define(function (require) {
     StopsModel = require("../models/StopModel"),
     Config = require("config"),
     TramsManager = require('../utils/TramManager'),
-    TramBase64 = require("text!../../images/trambase64.txt");
+    TramBase64 = require("text!../../images/trambase64.txt"),
+    TramInfoTemplate = require("text!../templates/TramInfoTmpl.html");
 
   var HomeView = BaseAppView.extend({
 
@@ -24,6 +25,10 @@ define(function (require) {
 
     stopImage: {
       url: "images/tram.png"
+    },
+
+    events: {
+      "click .hideInfo": "hideInfo"
     },
 
     tramImage: function (line, angle) {
@@ -89,15 +94,15 @@ define(function (require) {
 
           self.drawMarkers();
 
-          self.map.addListener("click", function (e) {
-            self.stopModel.fetch(e.latLng.lat(), e.latLng.lng()).done(function (data) {
-              self.markers.push(new google.maps.LatLng(data.lat, data.lon));
-              self.drawMarkers();
-              self.getTrams(data);
-            }).fail(function () {
-              console.log("fail");
-            });
-          });
+          // self.map.addListener("click", function (e) {
+          //   self.stopModel.fetch(e.latLng.lat(), e.latLng.lng()).done(function (data) {
+          //     self.markers.push(new google.maps.LatLng(data.lat, data.lon));
+          //     self.drawMarkers();
+          //     self.getTrams(data);
+          //   }).fail(function () {
+          //     console.log("fail");
+          //   });
+          // });
 
           self.map.setOptions(self.mapOptions);
         }).fail(function () {
@@ -153,8 +158,7 @@ define(function (require) {
         self.trams[i].marker.setMap(self.map);
         self.animateTrams();
         self.trams[i].marker.addListener("click", function (e) {
-          console.log(this.customData);
-          alert(JSON.stringify(this.customData.vehiclePositionData));
+          self.$el.find("#tramInfo").html(_.template(TramInfoTemplate)(this.customData.vehiclePositionData)).show();
           console.log(this.customData.vehiclePositionData.shortName)
         })
       }
@@ -195,7 +199,7 @@ define(function (require) {
 
     animateTrams: function () {
       for (var i = 0; i < this.trams.length; i++) {
-        var bearinRad = this.trams[i].data.vehiclePositionData.bearing / 180;
+        var bearinRad = (360 - this.trams[i].data.vehiclePositionData.bearing) / 180;
         var dist = (this.trams[i].data.vehiclePositionData.calculatedSpeed * (1000 / 3600)) / 1000;
         var calculatedPosition = this.computeDestinationPoint(this.trams[i].marker.position.lat(), this.trams[i].marker.position.lng(), dist, bearinRad);
         this.trams[i].marker.setPosition(new google.maps.LatLng(calculatedPosition.latitude, calculatedPosition.longitude));
@@ -206,6 +210,10 @@ define(function (require) {
     render: function () {
       var template = _.template(Template)();
       this.$el.html(template)
+    },
+
+    hideInfo: function(){
+      $("#tramInfo").hide();
     }
 
 
