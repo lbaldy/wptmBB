@@ -26,18 +26,17 @@ define(function (require) {
       url: "images/tram.png"
     },
 
-    tramImage: function (angle) {
+    tramImage: function (line, angle) {
       var canvas = document.createElement('canvas');//new Canvas();//document.getElementById("c");
       var ctx = canvas.getContext("2d");
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-      //console.log(angle);
-      ctx.rotate(angle * Math.PI / 180);
 
-      //ctx.fillRect(50,20, -50/2, -20/2);
 
-      ctx.drawImage(this.image, -(this.image.width / 2), -(this.image.height / 2));
-      // ctx.drawImage(this.image, 0, 0);
+      ctx.rotate(angle*Math.PI/180);
+      ctx.fillStyle = "black";
+      ctx.fillRect(10, 70, 15, 20);
+      ctx.strokeRect(10, 70, 15, 20)
+      ctx.fillStyle = 'red';
+      ctx.fillText(line, 12, 80);
       return canvas.toDataURL();
     },
 
@@ -82,11 +81,11 @@ define(function (require) {
           window.setInterval(function () {
             self.clearTrams();
             self.getTrams(data)
-          }, 5000);
+          }, 30000);
 
-          window.setInterval(function(){
+          window.setInterval(function () {
             self.animateTrams()
-          }, 100)
+          }, 1)
 
           self.drawMarkers();
 
@@ -135,6 +134,8 @@ define(function (require) {
           self.trams.push({
             marker: new google.maps.Marker({
               position: new google.maps.LatLng(data[i].vehiclePositionData.lat, data[i].vehiclePositionData.lon),
+              // icon: self.tramImage(data[i].vehiclePositionData.shortName, data[i].vehiclePositionData.bearing),
+              customData: data[i]
             }),
             data: data[i]
           });
@@ -150,10 +151,11 @@ define(function (require) {
       var self = this;
       for (var i = 0; i < this.trams.length; i++) {
         self.trams[i].marker.setMap(self.map);
-        var tramData = self.trams[i].data;
         self.animateTrams();
-        self.trams[i].marker.addListener("click", function () {
-          console.log(tramData);
+        self.trams[i].marker.addListener("click", function (e) {
+          console.log(this.customData);
+          alert(JSON.stringify(this.customData.vehiclePositionData));
+          console.log(this.customData.vehiclePositionData.shortName)
         })
       }
     },
@@ -165,13 +167,38 @@ define(function (require) {
       }
     },
 
-    animateTrams: function(){
-      // @TODO: Make this properly. It doesn't work and dividing by big number isn't a solution.
-      for (var i = 0; i < this.trams.length; i++) {
-        var sineBearing = (Math.sin(Math.PI * (this.trams[i].data.vehiclePositionData.bearing/180)))/100000;
-        var cosBearing = (Math.cos(Math.PI * (this.trams[i].data.vehiclePositionData.bearing/180)))/100000;
+    computeDestinationPoint: function (start, end, distance, bearing, radius) {
 
-        this.trams[i].marker.setPosition(new google.maps.LatLng(this.trams[i].marker.position.lat() + sineBearing, this.trams[i].marker.position.lng() + cosBearing));
+      var lat = start;
+      var lng = end;
+
+      radius = (typeof radius === 'undefined') ? 6378137 : Number(radius);
+
+      var δ = Number(distance) / radius; // angular distance in radians
+      var θ = Number(bearing);
+
+      var φ1 = Number(lat) / 180;
+      var λ1 = Number(lng) / 180;
+
+      var φ2 = Math.asin(Math.sin(φ1) * Math.cos(δ) +
+        Math.cos(φ1) * Math.sin(δ) * Math.cos(θ));
+      var λ2 = λ1 + Math.atan2(Math.sin(θ) * Math.sin(δ) * Math.cos(φ1),
+          Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2));
+      λ2 = (λ2 + 3 * Math.PI) % (2 * Math.PI) - Math.PI; // normalise to -180..+180°
+
+      return {
+        latitude: φ2 * 180,
+        longitude: λ2 * 180
+      };
+
+    },
+
+    animateTrams: function () {
+      for (var i = 0; i < this.trams.length; i++) {
+        var bearinRad = this.trams[i].data.vehiclePositionData.bearing / 180;
+        var dist = (this.trams[i].data.vehiclePositionData.calculatedSpeed * (1000 / 3600)) / 1000;
+        var calculatedPosition = this.computeDestinationPoint(this.trams[i].marker.position.lat(), this.trams[i].marker.position.lng(), dist, bearinRad);
+        this.trams[i].marker.setPosition(new google.maps.LatLng(calculatedPosition.latitude, calculatedPosition.longitude));
       }
     },
 
