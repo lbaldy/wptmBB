@@ -11,7 +11,8 @@ define(function (require) {
     Config = require("config"),
     TramsManager = require('../utils/TramManager'),
     TramBase64 = require("text!../../images/trambase64.txt"),
-    TramInfoTemplate = require("text!../templates/TramInfoTmpl.html");
+    TramInfoTemplate = require("text!../templates/TramInfoTmpl.html"),
+    jQueryGeo = require('jquerygeo');
 
   var HomeView = BaseAppView.extend({
 
@@ -36,7 +37,7 @@ define(function (require) {
       var ctx = canvas.getContext("2d");
 
 
-      ctx.rotate(angle*Math.PI/180);
+      ctx.rotate(angle * Math.PI / 180);
       ctx.fillStyle = "black";
       ctx.fillRect(10, 70, 15, 20);
       ctx.strokeRect(10, 70, 15, 20)
@@ -72,43 +73,31 @@ define(function (require) {
           elementId = 'map';
 
 
-        // Get the nearest stop to the map
-        self.stopModel.fetch(lat, lng).done(function (data) {
+        self.map = new google.maps.Map(document.getElementById(elementId), {
+          center: {lat: lat, lng: lng},
+          zoom: 16
+        });
 
-          self.map = new google.maps.Map(document.getElementById(elementId), {
-            center: {lat: data.lat, lng: data.lon},
-            zoom: 16
-          });
 
-          self.markers.push(new google.maps.LatLng(data.lat, data.lon));
+        // window.setInterval(function () {
+        //   self.clearTrams();
+        //   self.getTrams(data)
+        // }, 30000);
+        //
+        // window.setInterval(function () {
+        //   self.animateTrams()
+        // }, 1)
 
-          self.getTrams(data);
-          window.setInterval(function () {
-            self.clearTrams();
-            self.getTrams(data)
-          }, 30000);
 
-          window.setInterval(function () {
-            self.animateTrams()
-          }, 1)
+        self.map.addListener("click", function (e) {
+            self.clearMarkers();
+            self.drawMarkers({lat: e.latLng.lat(), lon: e.latLng.lng() });
+            //self.getTrams(data);
+        });
 
-          self.drawMarkers();
+        self.map.setOptions(self.mapOptions);
 
-          // self.map.addListener("click", function (e) {
-          //   self.stopModel.fetch(e.latLng.lat(), e.latLng.lng()).done(function (data) {
-          //     self.markers.push(new google.maps.LatLng(data.lat, data.lon));
-          //     self.drawMarkers();
-          //     self.getTrams(data);
-          //   }).fail(function () {
-          //     console.log("fail");
-          //   });
-          // });
-
-          self.map.setOptions(self.mapOptions);
-        }).fail(function () {
-          console.log("fail");
-        })
-
+        self.afterInit();
       });
 
       BaseAppView.prototype.initialize.call(this, options);
@@ -116,17 +105,52 @@ define(function (require) {
       this.render();
     },
 
-    clearMarkers: function () {
+    afterInit: function () {
+      var self = this;
+      // Get the nearest stop to the map
+      self.stopModel.fetch().done(function (data) {
+        for (var i = 0; i < data.length; i++) {
 
+          self.markers.push(new google.maps.Marker({
+            position: new google.maps.LatLng(data[i].lat, data[i].lon),
+            label: "S",
+            busStopData: data[i]
+          }))
+
+        }
+        self.drawMarkers();
+      }).fail(function () {
+        console.log("fail");
+      })
     },
 
-    drawMarkers: function () {
+    clearMarkers: function () {
       for (var i = 0; i < this.markers.length; i++) {
-        new google.maps.Marker({
-          position: this.markers[i],
-          label: "S",
-          map: this.map
-        });
+        if (this.markers[i].setMap) {
+          this.markers[i].setMap(null);
+        }
+      }
+    },
+
+    drawMarkers: function (data) {
+      var self = this;
+      var startPointPosition = data ? [data.lat, data.lon]: [self.map.getCenter().lat(), self.map.getCenter().lng()];
+      for (var i = 0; i < this.markers.length; i++) {
+        var distanceBetween = $.geo.distance(
+          {type: "Point", "coordinates": startPointPosition},
+          {type: "Point", "coordinates": [this.markers[i].position.lat(), this.markers[i].position.lng()]}
+        )
+        if (distanceBetween < 1500) {
+          this.markers[i].setMap(self.map)
+        }
+        this.markers[i].addListener("click", function (e) {
+          var busStopContext = this;
+          self.getTrams(this.busStopData);
+          window.setInterval(function () {
+            self.clearTrams();
+            self.getTrams(busStopContext.busStopData)
+          }, 30000);
+        })
       }
     },
 
@@ -162,6 +186,10 @@ define(function (require) {
           console.log(this.customData.vehiclePositionData.shortName)
         })
       }
+
+      window.setInterval(function () {
+        self.animateTrams()
+      }, 1)
     },
 
     clearTrams: function () {
@@ -179,7 +207,7 @@ define(function (require) {
       radius = (typeof radius === 'undefined') ? 6378137 : Number(radius);
 
       var δ = Number(distance) / radius; // angular distance in radians
-      var θ = Number(bearing);
+      var θ = 360 - Number(bearing);
 
       var φ1 = Number(lat) / 180;
       var λ1 = Number(lng) / 180;
@@ -198,11 +226,15 @@ define(function (require) {
     },
 
     animateTrams: function () {
+      var self = this;
       for (var i = 0; i < this.trams.length; i++) {
-        var bearinRad = (360 - this.trams[i].data.vehiclePositionData.bearing) / 180;
+        var bearinRad = this.trams[i].data.vehiclePositionData.bearing / 180;
         var dist = (this.trams[i].data.vehiclePositionData.calculatedSpeed * (1000 / 3600)) / 1000;
+
         var calculatedPosition = this.computeDestinationPoint(this.trams[i].marker.position.lat(), this.trams[i].marker.position.lng(), dist, bearinRad);
-        this.trams[i].marker.setPosition(new google.maps.LatLng(calculatedPosition.latitude, calculatedPosition.longitude));
+
+
+        //this.trams[i].marker.setPosition(new google.maps.LatLng(calculatedPosition.lat, calculatedPosition.lon));
       }
     },
 
@@ -212,7 +244,7 @@ define(function (require) {
       this.$el.html(template)
     },
 
-    hideInfo: function(){
+    hideInfo: function () {
       $("#tramInfo").hide();
     }
 

@@ -15,6 +15,12 @@ require.config({
         'jquery'
       ],
       exports: 'backbone'
+    },
+    jquerygeo: {
+      deps: [
+        'jquery'
+      ],
+      exports: 'jquerygeo'
     }
   },
   paths: {
@@ -24,7 +30,8 @@ require.config({
     text: '../../bower_components/text/text',
     config: '../scripts/utils/Config',
     pubsub: '../utils/PubSub',
-    mapsapi: 'https://maps.googleapis.com/maps/api/js?key=AIzaSyBzvem3lU7I_AT-TupnscWfX2aOh6DKtOs'
+    mapsapi: 'https://maps.googleapis.com/maps/api/js?key=AIzaSyBzvem3lU7I_AT-TupnscWfX2aOh6DKtOs',
+    jquerygeo: 'http://code.jquerygeo.com/jquery.geo-1.0.0-b3.min'
   }
 });
 
